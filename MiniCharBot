@@ -1,0 +1,173 @@
+#MINI CHATGPT SOBRE EL GRAFO
+import networkx as nx
+
+# ---------------------------------
+# CREAR GRAFO
+# ---------------------------------
+
+G = nx.DiGraph()
+
+# Relaciones del mundo (tripletas)
+relaciones = [
+    ("Ana", "Matrix", "ve"),
+    ("Luis", "Inception", "ve"),
+    ("Carlos", "Interstellar", "ve"),
+
+    ("Ana", "SciFi", "prefiere"),
+    ("Luis", "Accion", "prefiere"),
+    ("Carlos", "Drama", "prefiere"),
+
+    ("Matrix", "SciFi", "es_genero"),
+    ("Inception", "Accion", "es_genero"),
+    ("Interstellar", "Drama", "es_genero"),
+
+    ("Keanu Reeves", "Matrix", "actua_en"),
+    ("Leonardo DiCaprio", "Inception", "actua_en"),
+    ("Matthew McConaughey", "Interstellar", "actua_en"),
+
+    ("Christopher Nolan", "Inception", "dirige"),
+    ("Christopher Nolan", "Interstellar", "dirige")
+]
+
+# Agregar relaciones al grafo
+for origen, destino, rel in relaciones:
+    G.add_edge(origen, destino, relacion=rel)
+
+# ---------------------------------
+# FUNCIONES DE CONSULTA
+# ---------------------------------
+
+def obtener_relacion(origen, tipo_relacion):
+    resultados = []
+    for _, destino, datos in G.out_edges(origen, data=True):
+        if datos["relacion"] == tipo_relacion:
+            resultados.append(destino)
+    return resultados
+
+
+def quien_dirige(pelicula):
+    for origen, _, datos in G.in_edges(pelicula, data=True):
+        if datos["relacion"] == "dirige":
+            return origen
+    return None
+
+
+def quien_actua(pelicula):
+    actores = []
+    for origen, _, datos in G.in_edges(pelicula, data=True):
+        if datos["relacion"] == "actua_en":
+            actores.append(origen)
+    return actores
+
+
+# ---------------------------------
+# INFERENCIA (RECOMENDACIÓN)
+# ---------------------------------
+
+def recomendar(usuario):
+    recomendaciones = []
+
+    generos = obtener_relacion(usuario, "prefiere")
+
+    for pelicula in G.nodes():
+        for _, genero, datos in G.out_edges(pelicula, data=True):
+            if datos["relacion"] == "es_genero" and genero in generos:
+                recomendaciones.append(pelicula)
+
+    return list(set(recomendaciones))
+
+
+# ---------------------------------
+# MOTOR DE PREGUNTAS (CHAT)
+# ---------------------------------
+
+def responder(pregunta):
+
+    p = pregunta.lower()
+
+    # ¿Qué ve alguien?
+    if "que ve" in p:
+        usuario = pregunta.split()[-1]
+        pelis = obtener_relacion(usuario, "ve")
+        return f"{usuario} ve: {', '.join(pelis)}"
+
+    # ¿Qué prefiere?
+    elif "que prefiere" in p:
+        usuario = pregunta.split()[-1]
+        prefs = obtener_relacion(usuario, "prefiere")
+        return f"{usuario} prefiere: {', '.join(prefs)}"
+
+    # ¿Quién dirige?
+    elif "quien dirige" in p:
+        pelicula = pregunta.split()[-1]
+        director = quien_dirige(pelicula)
+        return f"{pelicula} fue dirigida por {director}"
+
+    # ¿Quién actúa?
+    elif "quien actua" in p:
+        pelicula = pregunta.split()[-1]
+        actores = quien_actua(pelicula)
+        return f"Actores en {pelicula}: {', '.join(actores)}"
+
+    # Recomendaciones
+    elif "recomienda" in p:
+        usuario = pregunta.split()[-1]
+        recs = recomendar(usuario)
+        return f"Recomendaciones para {usuario}: {', '.join(recs)}"
+
+    # Inferencia: ¿le gusta X?
+    elif "le gusta" in p:
+        partes = pregunta.split()
+        usuario = partes[0]
+        pelicula = partes[-1]
+
+        generos_usuario = obtener_relacion(usuario, "prefiere")
+
+        for _, genero, datos in G.out_edges(pelicula, data=True):
+            if datos["relacion"] == "es_genero" and genero in generos_usuario:
+                return f"Sí, porque {usuario} prefiere {genero}"
+
+        return "No parece coincidir con sus preferencias"
+
+    else:
+        return "No entiendo la pregunta 🤔"
+
+
+# ---------------------------------
+# INTERFAZ TIPO CHAT
+# ---------------------------------
+
+print("🎬 Mini ChatGPT sobre Grafo de Streaming")
+print("Escribe 'salir' para terminar")
+
+while True:
+    q = input("\nPregunta: ")
+
+    if q.lower() == "salir":
+        break
+
+    respuesta = responder(q)
+    print("IA:", respuesta)
+
+#🧠 EJEMPLOS PARA USAR EN CLASE
+
+#Ahora puedemos escribir:
+
+#🔹 Consulta directa
+#Pregunta: que ve Ana
+#IA: Ana ve: Matrix
+#🔹 Preferencias
+#Pregunta: que prefiere Ana
+#IA: Ana prefiere: SciFi
+#🔹 Consulta semántica
+#Pregunta: quien dirige Inception
+#IA: Inception fue dirigida por Christopher Nolan
+#🔹 Inferencia ( lo importante)
+#Pregunta: le gusta Ana Interstellar
+#IA: Sí, porque Ana prefiere SciFi
+
+# Esto NO está guardado explícitamente.
+
+#🔹 Recomendación automática
+#Pregunta: recomienda Ana
+#IA: Recomendaciones para Ana: Matrix, Interstellar
